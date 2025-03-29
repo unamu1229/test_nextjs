@@ -1,6 +1,7 @@
 'use client'
 
 import {useState} from "react";
+import { TodoItem } from "./TodoItem";
 
 export default function Page() {
 
@@ -32,9 +33,8 @@ export default function Page() {
             {
                 todoList.map((todo) => {
 
-                    return <li>
-                        <input type="checkbox" id={todo.id} checked={todo.completed} onClick={() => changeCompleted(todo.id)}/>
-                        <label for={todo.id}>{todo.task}</label>
+                    return <li key={todo.id}>
+                        <TodoItem id={todo.id} task={todo.task} completed={todo.completed} changeCompleted={changeCompleted}/>
                     </li>
                 })
             }
