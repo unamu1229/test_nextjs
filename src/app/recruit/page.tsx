@@ -27,6 +27,13 @@ export default function Page() {
         changeTodoList(changedTodoList);
     }
 
+    const deleteTodo = (id: number) => {
+        const changedTodoList = todoList.filter((todo) => {
+            return todo.id !== id;
+        })
+        changeTodoList(changedTodoList);
+    }
+
     return <>
         <h1>RecruitのReact研修</h1>
         <ul>
@@ -34,7 +41,7 @@ export default function Page() {
                 todoList.map((todo) => {
 
                     return <li key={todo.id}>
-                        <TodoItem id={todo.id} task={todo.task} completed={todo.completed} changeCompleted={changeCompleted}/>
+                        <TodoItem id={todo.id} task={todo.task} completed={todo.completed} changeCompleted={changeCompleted} deleteTodo={deleteTodo}/>
                     </li>
                 })
             }
