@@ -1,6 +1,6 @@
 'use client'
 
-import {ChangeEvent, ChangeEventHandler, KeyboardEventHandler, MouseEventHandler, useState} from "react";
+import {ChangeEvent, ChangeEventHandler, KeyboardEventHandler, MouseEventHandler, useReducer, useState} from "react";
 import { TodoItem } from "./TodoItem";
 
 export default function Page() {
@@ -18,67 +18,122 @@ export default function Page() {
         { id: 4, task: "Learning Next.js", completed: false },
     ];
 
-    const [todoList, changeTodoList] = useState(todoListInit);
+    type CompletedAction = {
+        type: "completed";
+        id: number;
+    }
 
-    const changeCompleted = (id: number) => {
-        const changedTodoList = todoList.map((todo) => {
-            if (todo.id == id) {
-                return {
-                    ...todo,
-                    completed: !todo.completed
-                }
+    type DeletedAction = {
+        type: "deleted";
+        id: number;
+    }
+
+    type AddedAction = {
+        type: "added";
+        task: string;
+    }
+
+    type Action = CompletedAction | DeletedAction | AddedAction;
+
+    const completeAction:(id: number) => CompletedAction =
+        (id: number) => {
+            return {
+                type: "completed",
+                id: id
             }
-            return  todo;
-        })
-        changeTodoList(changedTodoList);
+        }
+
+    const deleteAction:(id: number) => DeletedAction =
+        (id: number) => {
+            return {
+                type: "deleted",
+                id: id
+            }
+        }
+
+    const addAction:(task: string) => AddedAction =
+        (task: string) => {
+            return {
+                type: "added",
+                task: task
+            }
+        }
+
+    const newTodoList = (todoList: Todo[], action: Action) => {
+        switch (action.type) {
+            case "completed":
+                return todoList.map((todo) => {
+                    if (todo.id == action.id) {
+                        return {
+                            ...todo,
+                            completed: !todo.completed
+                        }
+                    }
+                    return  todo;
+                });
+
+            case "deleted":
+                return todoList.filter((todo) => {
+                    return todo.id !== action.id;
+                });
+
+            case "added":
+                if (action.task === "") {
+                    return todoList;
+                }
+
+                const currentMaxId: number = todoList.reduce((accumulator:number , todo: Todo) => {
+                    return accumulator > todo.id ? accumulator : todo.id;
+                }, 0);
+
+                return [
+                    ...todoList,
+                    {
+                        id: currentMaxId + 1,
+                        task: action.task,
+                        completed: false
+                    }
+                ];
+            default:
+                return todoList;
+        }
     }
 
-    const deleteTodo = (id: number) => {
-        const changedTodoList = todoList.filter((todo) => {
-            return todo.id !== id;
-        })
-        changeTodoList(changedTodoList);
-    }
+    const [todoList, changeTodoListDispatch] = useReducer(newTodoList, todoListInit);
 
     const [newTodo, setNewTodo] = useState("");
     const changeNewTodo: ChangeEventHandler<HTMLInputElement> = (event: ChangeEvent<HTMLInputElement>) => {
         setNewTodo(event.currentTarget.value);
     };
 
-    const addTodoFromEnter: KeyboardEventHandler<HTMLInputElement> = (event) => {
-        if (event.key !== "Enter") {
-            return;
-        }
-        addTodo();
-    }
-
-    const addTodoFromButton: MouseEventHandler<HTMLButtonElement> = (event) => {
-        addTodo();
-    }
-
-    function addTodo() {
-        if (newTodo === "") {
-            return;
-        }
-
-        const currentMaxId: number = todoList.reduce((accumulator:number , todo: Todo) => {
-            return accumulator > todo.id ? accumulator : todo.id;
-        }, 0);
-        const newTodoList = [...todoList, {id: currentMaxId + 1, task: newTodo, completed: false}];
-        changeTodoList(newTodoList);
-        setNewTodo("");
-    }
-
-
     return <>
         <h1>RecruitのReact研修</h1>
-        <input type="text" value={newTodo} onChange={changeNewTodo} onKeyDown={addTodoFromEnter}/> <button onClick={addTodoFromButton}>追加</button>
+        <input type="text" value={newTodo} onChange={changeNewTodo}
+               onKeyDown={
+                    (event) => {
+                        if (event.key !== "Enter") {
+                            return;
+                        }
+                        changeTodoListDispatch(addAction(newTodo))
+                        setNewTodo("")
+                    }
+               }
+        />
+
+        <button onClick={() => {
+            changeTodoListDispatch(addAction(newTodo));
+            setNewTodo("");
+        }}>追加</button>
+
         <ul>
             {
                 todoList.map((todo) => {
 
                     return <li key={todo.id}>
-                        <TodoItem id={todo.id} task={todo.task} completed={todo.completed} changeCompleted={changeCompleted} deleteTodo={deleteTodo}/>
+                        <TodoItem id={todo.id} task={todo.task} completed={todo.completed}
+                                  changeCompleted={() => changeTodoListDispatch(completeAction(todo.id))}
+                                      deleteTodo={() => changeTodoListDispatch(deleteAction(todo.id))}
+                                      />
                     </li>
                 })
             }
